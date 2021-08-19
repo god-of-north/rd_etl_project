@@ -1,14 +1,5 @@
-rm dshop_bu_dag.zip
-rm out_of_stock_dag.zip
+pip3 install -r requirements.txt
 
-zip -r dshop_bu_dag.zip dshop_bu_dag.py operators
-zip -r out_of_stock_dag.zip out_of_stock_dag.py data_loader operators
+psql -d template1 -h localhost -p 5433 -U gpuser -f ./dwh/init_dwh.sql
 
-rm ~/airflow/dags/dshop_bu_dag.zip
-rm ~/airflow/dags/out_of_stock_dag.zip
-
-cp dshop_bu_dag.zip  ~/airflow/dags/
-cp out_of_stock_dag.zip  ~/airflow/dags/
-
-airflow dags list
-
+./update_dags.sh
