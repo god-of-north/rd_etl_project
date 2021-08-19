@@ -13,7 +13,7 @@ from pyspark.sql.dataframe import DataFrame
 from data_loader.config import Config
 from data_loader.loader import Loader
 from data_loader.hdfs_serializer import HDFSSerializer
-from bronze_to_silver_append_operator import BronzeToSilverAppendOperator
+from operators.bronze_to_silver_append_operator import BronzeToSilverAppendOperator
 
 BRONZE_PATH = '/bronze/out_of_stock/data'
 SILVER_PATH = '/silver/out_of_stock/'

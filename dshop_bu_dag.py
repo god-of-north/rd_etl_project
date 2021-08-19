@@ -7,8 +7,8 @@ from airflow.operators.dummy_operator import DummyOperator
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 
-from postgres_dump_to_hdfs_operator import PostgresDumpToHDFSOperator
-from bronze_to_silver_operator import BronzeToSilverOperator
+from operators.postgres_dump_to_hdfs_operator import PostgresDumpToHDFSOperator
+from operators.bronze_to_silver_operator import BronzeToSilverOperator
 
 BRONZE_PATH = '/bronze/dshop_bu'
 SILVER_PATH = '/silver/dshop_bu'
