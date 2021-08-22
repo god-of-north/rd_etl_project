@@ -35,7 +35,8 @@ def load_from_silver(spark: SparkSession, table: str) -> DataFrame:
 
 def save_to_dwh(df: DataFrame, table: str):
     print(f'Writing {table}...')
-    df.write.options(batchSize=10000, queyTime=690).jdbc(gp_url,
+    df.write.options(batchSize=100000, queyTime=690)\
+            .jdbc(gp_url,
                   table=table,
                   properties=gp_properties,
                   mode='overwrite')
@@ -85,14 +86,17 @@ if __name__ == '__main__':
                                    store_types_df.type
                              )
     dim_stores_df.show()
+
     fact_orders_df = orders_df.select(
                                     orders_df.product_id,
                                     orders_df.client_id,
                                     orders_df.store_id,
                                     orders_df.order_date,
                                     orders_df.quantity
-                                  ).repartition('store_id')
+                                  )\
+                               .repartition('store_id')
     fact_orders_df.show()
+
     fact_out_of_stock_df = out_of_stock_df.withColumnRenamed('date','oos_date')
     fact_out_of_stock_df.show()
     dim_date_df = fact_orders_df.select(
@@ -110,7 +114,7 @@ if __name__ == '__main__':
     dim_date_df.show()
     
     print('Preparation done')
-
+    
     save_to_dwh(dim_date_df, 'dim_date')
     save_to_dwh(dim_clients_df, 'dim_clients')
     save_to_dwh(dim_products_df, 'dim_products')
@@ -118,4 +122,4 @@ if __name__ == '__main__':
     save_to_dwh(dim_stores_df, 'dim_stores')
     save_to_dwh(fact_out_of_stock_df, 'fact_out_of_stock')
     save_to_dwh(fact_orders_df, 'fact_orders')
-
+    
