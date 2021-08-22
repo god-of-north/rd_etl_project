@@ -3,6 +3,7 @@ from airflow.operators.python_operator import PythonOperator
 
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.types import StructType
 
 class BronzeToSilverOperator(PythonOperator):
 
@@ -12,6 +13,7 @@ class BronzeToSilverOperator(PythonOperator):
     @apply_defaults
     def __init__(
             self, 
+            schema: StructType,
             load_path: str,
             save_path: str,
             partitition_by = None,
@@ -20,6 +22,7 @@ class BronzeToSilverOperator(PythonOperator):
         self.load_path = load_path
         self.save_path = save_path
         self.partitition_by = partitition_by
+        self.schema = schema
 
         super(BronzeToSilverOperator, self).__init__(*args, **kwargs)
 
@@ -45,7 +48,7 @@ class BronzeToSilverOperator(PythonOperator):
     def _load_df(self, spark: SparkSession, file_path: str) -> DataFrame:
         return spark.read.load(file_path,
                                header="true",
-                               inferSchema="true",
+                               schema=self.schema,
                                format="csv")
 
     def _wite_df(self, df: DataFrame, file_path: str, partitionBy = None):
