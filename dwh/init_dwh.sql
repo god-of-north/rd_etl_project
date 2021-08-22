@@ -9,7 +9,7 @@ ALTER DATABASE rd_dwh OWNER TO gpuser;
 
 CREATE TABLE dim_date(
 	action_date date PRIMARY KEY,
-	action_week int not NULL,
+	action_day int not NULL,
 	action_month int not NULL,
 	action_year int not NULL,
 	action_weekday varchar(3) not NULL
