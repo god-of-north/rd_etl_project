@@ -29,6 +29,7 @@ CREATE TABLE dim_area(
 
 CREATE TABLE dim_clients(
 	client_id SERIAL PRIMARY KEY,
+	fullname varchar(64),
 	area_id int
 );
 
