@@ -3,6 +3,7 @@ import logging
 
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.types import StructType,StructField, StringType, IntegerType, DateType
 import pyspark.sql.functions as F
 
 
@@ -38,6 +39,13 @@ def save_to_dwh(df: DataFrame, table: str):
                   table=table,
                   properties=gp_properties,
                   mode='overwrite')
+
+def append_to_dwh(df: DataFrame, table: str):
+    logging.info(f'Appending data to {table}...')
+    df.write.jdbc(gp_url,
+                  table=table,
+                  properties=gp_properties,
+                  mode='append')
 
 def process_dim_products():
     spark = open_spark_session()
@@ -145,3 +153,27 @@ def process_dim_date():
     save_to_dwh(dim_date_df, 'dim_date')
 
 
+def append_dim_date(execution_date, **context):
+    logging.info(f'Appending date {execution_date.to_date_string()}...')
+
+    spark = open_spark_session()
+
+    schema = StructType([
+        StructField("action_date", DateType(), False),
+        StructField("action_day", IntegerType(), False),
+        StructField("action_month", IntegerType(), False),
+        StructField("action_year", IntegerType(), False),
+        StructField("action_weekday", StringType(), False),
+    ])
+
+    data = [(
+        execution_date._datetime.date(), 
+        execution_date.day, 
+        execution_date.month, 
+        execution_date.year, 
+        execution_date.format('ddd'),
+        )]
+    
+    df = spark.createDataFrame(data=data, schema=schema)    
+
+    append_to_dwh(df, 'dim_date')
