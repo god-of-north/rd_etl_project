@@ -31,7 +31,7 @@ class BronzeToSilverOperator(PythonOperator):
         session = self._open_spark_session()
         df = self._load_df(session, self.load_path)
 
-        self.log.info('Performing data tranformations...')
+        self.log.info('Performing data transformations...')
         self.op_kwargs['session'] = session
         self.op_kwargs['df'] = df
         df = super(BronzeToSilverOperator, self).execute(context)

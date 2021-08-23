@@ -3,6 +3,7 @@ from os import path
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python_operator import PythonOperator
 
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
@@ -10,13 +11,16 @@ from pyspark.sql.types import StringType, IntegerType, DateType, StructType, Str
 import pyspark.sql.functions as F
 
 from operators.postgres_dump_to_hdfs_operator import PostgresDumpToHDFSOperator
-from operators.bronze_to_silver_log_rejects import BronzeToSilverWithRejectLog
 from operators.bronze_to_silver_operator import BronzeToSilverOperator
+from dwh import functions as DWH
 
 BRONZE_PATH = '/bronze/dshop_bu'
 SILVER_PATH = '/silver/dshop_bu'
 HDFS_CONNECTION = 'hadoop_connection'
 POSTGRES_CONNECTION = 'postgres_dshop_bu_connection'
+DOWNLOAD_PATH = path.join(BRONZE_PATH,'data')
+TEMP_PATH = path.join(BRONZE_PATH, 'temp')
+TODAY_DATE = date.today().strftime('%Y-%m-%d')
 TABLES = [
     {'name': 'aisles',
     'schema': StructType([
@@ -103,9 +107,13 @@ TABLES = [
     },
 ]
 
-DOWNLOAD_PATH = path.join(BRONZE_PATH,'data')
-TEMP_PATH = path.join(BRONZE_PATH, 'temp')
-TODAY_DATE = date.today().strftime('%Y-%m-%d')
+SILVER_TO_DWH_PROCESS = (
+    DWH.process_dim_stores,
+    DWH.process_dim_products,
+    DWH.process_dim_clients,
+    DWH.process_dim_area,
+    DWH.process_fact_orders,
+    )
 
 default_args = {
     'owner': 'lesyk_maksym',
@@ -127,6 +135,7 @@ with DAG(
 
     start = DummyOperator(task_id=f'start', dag=dag)
     stage2 = DummyOperator(task_id=f'stage2', dag=dag)
+    stage3 = DummyOperator(task_id=f'stage3', dag=dag)
     end = DummyOperator(task_id=f'end', dag=dag)
 
     for table in TABLES:
@@ -156,5 +165,13 @@ with DAG(
             python_callable=table_transform,
             partitition_by=table_partition,
         )
-        stage2 >> t >> end
+        stage2 >> t >> stage3
+
+    for process in SILVER_TO_DWH_PROCESS:
+        t = PythonOperator(
+            task_id=f'silver_to_dwh_{process.__name__}',
+            dag=dag,
+            python_callable=process,
+        )
+        stage3 >> t >> end
 
