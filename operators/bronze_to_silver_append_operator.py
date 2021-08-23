@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 
-from bronze_to_silver_operator import BronzeToSilverOperator
+from .bronze_to_silver_operator import BronzeToSilverOperator
 
 class BronzeToSilverAppendOperator(BronzeToSilverOperator):
 

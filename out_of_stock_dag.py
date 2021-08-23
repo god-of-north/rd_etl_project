@@ -73,7 +73,8 @@ with DAG(
         load_path=path.join(BRONZE_PATH, TODAY_DATE, 'data.json'),
         save_path=SILVER_PATH,
         python_callable=prepare_table,
-        partitition_by='date'
+        partitition_by='date',
+        schema=None,
     )
 
     download_api_data >> bronze_to_silver 

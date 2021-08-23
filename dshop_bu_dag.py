@@ -10,6 +10,7 @@ from pyspark.sql.types import StringType, IntegerType, DateType, StructType, Str
 import pyspark.sql.functions as F
 
 from operators.postgres_dump_to_hdfs_operator import PostgresDumpToHDFSOperator
+from operators.bronze_to_silver_log_rejects import BronzeToSilverWithRejectLog
 from operators.bronze_to_silver_operator import BronzeToSilverOperator
 
 BRONZE_PATH = '/bronze/dshop_bu'
@@ -22,7 +23,7 @@ TABLES = [
         StructField('aisle_id', IntegerType(), False),
         StructField('aisle', StringType(), True),
     ]),
-    'transform': lambda s, df: df.where(F.isnull(df.aisle) != True)\
+    'transform': lambda session, df: df.where(F.isnull(df.aisle) != True)\
                                  .dropDuplicates(),
     'partitionBy': None,
     },
@@ -33,7 +34,7 @@ TABLES = [
         StructField('fullname', StringType(), True),
         StructField('location_area_id', IntegerType(), True),
     ]),
-    'transform': lambda s, df: df.dropDuplicates(),
+    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
     },
 
@@ -42,7 +43,7 @@ TABLES = [
         StructField('department_id', IntegerType(), False),
         StructField('department', StringType(), True),
     ]),
-    'transform': lambda s, df: df.where(F.isnull(df.department) != True)\
+    'transform': lambda session, df: df.where(F.isnull(df.department) != True)\
                                  .dropDuplicates(),
     'partitionBy': None,
     },
@@ -54,7 +55,7 @@ TABLES = [
         StructField('aisle_id', IntegerType(), True),
         StructField('department_id', IntegerType(), True),
     ]),
-    'transform': lambda s, df: df.dropDuplicates(),
+    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
     },
 
@@ -63,7 +64,7 @@ TABLES = [
         StructField('area_id', IntegerType(), False),
         StructField('area', StringType(), True),
     ]),
-    'transform': lambda s, df: df.where(F.isnull(df.area) != True)\
+    'transform': lambda session, df: df.where(F.isnull(df.area) != True)\
                                  .dropDuplicates(),
     'partitionBy': None,
     },
@@ -73,7 +74,7 @@ TABLES = [
         StructField('store_type_id', IntegerType(), False),
         StructField('type', StringType(), True),
     ]),
-    'transform': lambda s, df: df.where(F.isnull(df.type) != True)\
+    'transform': lambda session, df: df.where(F.isnull(df.type) != True)\
                                  .dropDuplicates(),
     'partitionBy': None,
     },
@@ -84,7 +85,7 @@ TABLES = [
         StructField('location_area_id', IntegerType(), True),
         StructField('store_type_id', IntegerType(), True),
     ]),
-    'transform': lambda s, df: df.dropDuplicates(),
+    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
     },
 
@@ -97,7 +98,7 @@ TABLES = [
         StructField('quantity', IntegerType(), True),
         StructField('order_date', DateType(), True),
     ]),
-    'transform': lambda s, df: df.dropDuplicates(),
+    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': 'store_id',
     },
 ]
@@ -120,7 +121,7 @@ with DAG(
     'dshop_bu_dag',
     description='Dump tables from dshop_bu DB',
     schedule_interval='@daily',
-    start_date=datetime(2021,8,12,22,0),
+    start_date=datetime(2021,8,21,22,0),
     default_args=default_args
 ) as dag:
 
