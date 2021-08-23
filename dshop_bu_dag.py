@@ -27,9 +27,9 @@ TABLES = [
         StructField('aisle_id', IntegerType(), False),
         StructField('aisle', StringType(), True),
     ]),
+    'partitionBy': None,
     'transform': lambda session, df: df.where(F.isnull(df.aisle) != True)\
                                  .dropDuplicates(),
-    'partitionBy': None,
     },
 
     {'name': 'clients',
@@ -38,8 +38,8 @@ TABLES = [
         StructField('fullname', StringType(), True),
         StructField('location_area_id', IntegerType(), True),
     ]),
-    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
+    'transform': lambda session, df: df.dropDuplicates(),
     },
 
     {'name': 'departments',
@@ -47,9 +47,9 @@ TABLES = [
         StructField('department_id', IntegerType(), False),
         StructField('department', StringType(), True),
     ]),
+    'partitionBy': None,
     'transform': lambda session, df: df.where(F.isnull(df.department) != True)\
                                  .dropDuplicates(),
-    'partitionBy': None,
     },
 
     {'name': 'products',
@@ -59,8 +59,8 @@ TABLES = [
         StructField('aisle_id', IntegerType(), True),
         StructField('department_id', IntegerType(), True),
     ]),
-    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
+    'transform': lambda session, df: df.dropDuplicates(),
     },
 
     {'name': 'location_areas',
@@ -68,9 +68,9 @@ TABLES = [
         StructField('area_id', IntegerType(), False),
         StructField('area', StringType(), True),
     ]),
+    'partitionBy': None,
     'transform': lambda session, df: df.where(F.isnull(df.area) != True)\
                                  .dropDuplicates(),
-    'partitionBy': None,
     },
 
     {'name': 'store_types',
@@ -78,9 +78,9 @@ TABLES = [
         StructField('store_type_id', IntegerType(), False),
         StructField('type', StringType(), True),
     ]),
+    'partitionBy': None,
     'transform': lambda session, df: df.where(F.isnull(df.type) != True)\
                                  .dropDuplicates(),
-    'partitionBy': None,
     },
 
     {'name': 'stores',
@@ -89,8 +89,8 @@ TABLES = [
         StructField('location_area_id', IntegerType(), True),
         StructField('store_type_id', IntegerType(), True),
     ]),
-    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': None,
+    'transform': lambda session, df: df.dropDuplicates(),
     },
 
     {'name': 'orders',
@@ -102,8 +102,8 @@ TABLES = [
         StructField('quantity', IntegerType(), True),
         StructField('order_date', DateType(), True),
     ]),
-    'transform': lambda session, df: df.dropDuplicates(),
     'partitionBy': 'store_id',
+    'transform': lambda session, df: df.dropDuplicates(),
     },
 ]
 
