@@ -14,6 +14,7 @@ from data_loader.config import Config
 from data_loader.loader import Loader
 from data_loader.hdfs_serializer import HDFSSerializer
 from operators.bronze_to_silver_append_operator import BronzeToSilverAppendOperator
+from dwh import functions as DWH
 
 BRONZE_PATH = '/bronze/out_of_stock/data'
 SILVER_PATH = '/silver/out_of_stock/'
@@ -77,4 +78,10 @@ with DAG(
         schema=None,
     )
 
-    download_api_data >> bronze_to_silver 
+    silver_to_dwh = PythonOperator(
+        task_id=f'silver_to_dwh',
+        dag=dag,
+        python_callable=DWH.process_fact_out_of_stock,
+    )
+
+    download_api_data >> bronze_to_silver >> silver_to_dwh
