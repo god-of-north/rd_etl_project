@@ -12,7 +12,7 @@ hdfs_url = 'http://127.0.0.1:50070/'
 gp_url = "jdbc:postgresql://127.0.0.1:5433/rd_dwh"
 gp_properties = {"user": "gpuser", "password": "secret"}
 
-jdbc_path = '~/jdbc/postgresql-42.2.23.jar'
+jdbc_path = '/home/user/jdbc/postgresql-42.2.23.jar'
 
 SILVER_PATH = '/silver/dshop_bu'
 
@@ -171,7 +171,7 @@ def append_dim_date(execution_date, **context):
         execution_date.day, 
         execution_date.month, 
         execution_date.year, 
-        execution_date.format('ddd'),
+        execution_date._datetime.strftime('%a'),
         )]
     
     df = spark.createDataFrame(data=data, schema=schema)    
