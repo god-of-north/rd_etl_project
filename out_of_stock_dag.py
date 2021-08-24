@@ -8,6 +8,7 @@ from airflow.hooks.base_hook import BaseHook
 
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
+from pyspark.sql.types import IntegerType, DateType, StructType, StructField
 
 
 from data_loader.config import Config
@@ -29,6 +30,10 @@ CONFIG = {
                 'endpoint': "/auth",
             }
         }
+SCHEMA = StructType([
+            StructField('product_id', IntegerType(), False),
+            StructField('date', DateType(), False),
+        ])
 TODAY_DATE = date.today().strftime('%Y-%m-%d')
 
 default_args = {
@@ -58,7 +63,7 @@ with DAG(
     'out_of_stock_dag',
     description='Download out of stock information from API',
     schedule_interval='@daily',
-    start_date=datetime(2021,8,10,22,0),
+    start_date=datetime(2021,8,21,22,0),
     default_args=default_args
 ) as dag:
 
@@ -75,7 +80,7 @@ with DAG(
         save_path=SILVER_PATH,
         python_callable=prepare_table,
         partitition_by='date',
-        schema=None,
+        schema=SCHEMA,
     )
 
     silver_to_dwh = PythonOperator(
