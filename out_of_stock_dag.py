@@ -6,58 +6,44 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.models.connection import Connection
 from airflow.hooks.base_hook import BaseHook
 
-from pyspark.sql import SparkSession
-from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.types import IntegerType, DateType, StructType, StructField
-
-
 from data_loader.config import Config
 from data_loader.loader import Loader
 from data_loader.hdfs_serializer import HDFSSerializer
 from operators.bronze_to_silver_append_operator import BronzeToSilverAppendOperator
 from dwh import functions as DWH
+from tools import cfg
 
-BRONZE_PATH = '/bronze/out_of_stock/data'
-SILVER_PATH = '/silver/out_of_stock/'
-API_CONNECTION = 'out_of_stock_connection'
-HDFS_CONNECTION = 'hadoop_connection'
-CONFIG = {
-            'data':{
-                'endpoint': "/out_of_stock",
-                'dates': []
-            },
-            'auth':{
-                'endpoint': "/auth",
-            }
-        }
-SCHEMA = StructType([
-            StructField('product_id', IntegerType(), False),
-            StructField('date', DateType(), False),
-        ])
+
 TODAY_DATE = date.today().strftime('%Y-%m-%d')
 
 default_args = {
-    'owner': 'lesyk_maksym',
-    'email': ['kiev.blues@gmail.com'],
-    'email_on_failure': False,
-    'retries': 2
+    'owner': cfg.out_of_stock.owner,
+    'email': cfg.out_of_stock.email,
+    'email_on_failure': cfg.out_of_stock.email_on_failure,
+    'retries': cfg.out_of_stock.retries
 }
 
 def download_data():
-    api_connection: Connection = BaseHook.get_connection(API_CONNECTION)
-    hdfs_connection: Connection = BaseHook.get_connection(HDFS_CONNECTION)
+    api_connection: Connection = BaseHook.get_connection(cfg.out_of_stock.api_connection)
+    hdfs_connection: Connection = BaseHook.get_connection(cfg.common.hdfs_connection)
 
-    CONFIG['data']['dates'].append(TODAY_DATE)
-    CONFIG['data']['url'] = api_connection.host
-    CONFIG['auth']['username'] = api_connection.login
-    CONFIG['auth']['password'] = api_connection.password
+    CONFIG = {
+                'data':{
+                    'endpoint': cfg.out_of_stock.data_endpoint,
+                    'dates': [TODAY_DATE],
+                    'url': api_connection.host
+                },
+                'auth':{
+                    'endpoint': cfg.out_of_stock.auth_endpoint,
+                    'username': api_connection.login,
+                    'password': api_connection.password
+                }
+            }
     
     loader = Loader(config      = Config.load_dict(CONFIG),
-                    serializer  = HDFSSerializer(BRONZE_PATH, hdfs_url=f'http://{hdfs_connection.host}:{hdfs_connection.port}', hdfs_user=hdfs_connection.login))
+                    serializer  = HDFSSerializer(cfg.out_of_stock.bronze_path, hdfs_url=f'http://{hdfs_connection.host}:{hdfs_connection.port}', hdfs_user=hdfs_connection.login))
     loader.download()
 
-def prepare_table(session: SparkSession, df: DataFrame):
-    return df.dropDuplicates()
 
 with DAG(
     'out_of_stock_dag',
@@ -76,11 +62,11 @@ with DAG(
     bronze_to_silver = BronzeToSilverAppendOperator(
         task_id='bronze_to_silver',
         dag=dag,
-        load_path=path.join(BRONZE_PATH, TODAY_DATE, 'data.json'),
-        save_path=SILVER_PATH,
-        python_callable=prepare_table,
+        load_path=path.join(cfg.out_of_stock.bronze_path, TODAY_DATE, 'data.json'),
+        save_path=cfg.out_of_stock.silver_path,
+        python_callable=DWH.transform_common,
         partitition_by='date',
-        schema=SCHEMA,
+        schema=cfg.out_of_stock.table_schema,
     )
 
     silver_to_dwh = PythonOperator(

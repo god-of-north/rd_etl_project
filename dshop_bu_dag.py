@@ -5,125 +5,19 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
-from pyspark.sql import SparkSession
-from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.types import StringType, IntegerType, DateType, StructType, StructField
-import pyspark.sql.functions as F
-
 from operators.postgres_dump_to_hdfs_operator import PostgresDumpToHDFSOperator
 from operators.bronze_to_silver_operator import BronzeToSilverOperator
 from dwh import functions as DWH
+from tools import cfg
 
-BRONZE_PATH = '/bronze/dshop_bu'
-SILVER_PATH = '/silver/dshop_bu'
-HDFS_CONNECTION = 'hadoop_connection'
-POSTGRES_CONNECTION = 'postgres_dshop_bu_connection'
-DOWNLOAD_PATH = path.join(BRONZE_PATH,'data')
-TEMP_PATH = path.join(BRONZE_PATH, 'temp')
-TODAY_DATE = date.today().strftime('%Y-%m-%d')
-TABLES = [
-    {'name': 'aisles',
-    'schema': StructType([
-        StructField('aisle_id', IntegerType(), False),
-        StructField('aisle', StringType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.where(F.isnull(df.aisle) != True)\
-                                 .dropDuplicates(),
-    },
-
-    {'name': 'clients',
-    'schema': StructType([
-        StructField('id', IntegerType(), False),
-        StructField('fullname', StringType(), True),
-        StructField('location_area_id', IntegerType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.dropDuplicates(),
-    },
-
-    {'name': 'departments',
-    'schema': StructType([
-        StructField('department_id', IntegerType(), False),
-        StructField('department', StringType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.where(F.isnull(df.department) != True)\
-                                 .dropDuplicates(),
-    },
-
-    {'name': 'products',
-    'schema': StructType([
-        StructField('product_id', IntegerType(), False),
-        StructField('product_name', StringType(), True),
-        StructField('aisle_id', IntegerType(), True),
-        StructField('department_id', IntegerType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.dropDuplicates(),
-    },
-
-    {'name': 'location_areas',
-    'schema': StructType([
-        StructField('area_id', IntegerType(), False),
-        StructField('area', StringType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.where(F.isnull(df.area) != True)\
-                                 .dropDuplicates(),
-    },
-
-    {'name': 'store_types',
-    'schema': StructType([
-        StructField('store_type_id', IntegerType(), False),
-        StructField('type', StringType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.where(F.isnull(df.type) != True)\
-                                 .dropDuplicates(),
-    },
-
-    {'name': 'stores',
-    'schema': StructType([
-        StructField('store_id', IntegerType(), False),
-        StructField('location_area_id', IntegerType(), True),
-        StructField('store_type_id', IntegerType(), True),
-    ]),
-    'partitionBy': None,
-    'transform': lambda session, df: df.dropDuplicates(),
-    },
-
-    {'name': 'orders',
-    'schema': StructType([
-        StructField('order_id', IntegerType(), True),
-        StructField('product_id', IntegerType(), True),
-        StructField('client_id', IntegerType(), True),
-        StructField('store_id', IntegerType(), True),
-        StructField('quantity', IntegerType(), True),
-        StructField('order_date', DateType(), True),
-    ]),
-    'partitionBy': 'store_id',
-    'transform': lambda session, df: df.dropDuplicates(),
-    },
-]
-
-SILVER_TO_DWH_PROCESS = (
-    DWH.process_dim_stores,
-    DWH.process_dim_products,
-    DWH.process_dim_clients,
-    DWH.process_dim_area,
-    DWH.process_fact_orders,
-    )
 
 default_args = {
-    'owner': 'lesyk_maksym',
-    'email': ['kiev.blues@gmail.com'],
-    'email_on_failure': False,
-    'retries': 2
+    'owner': cfg.dshop.owner,
+    'email': cfg.dshop.email,
+    'email_on_failure': cfg.dshop.email_on_failure,
+    'retries': cfg.dshop.retries
 }
 
-def prepare_table(session: SparkSession, df: DataFrame):
-    return df.dropDuplicates()
 
 with DAG(
     'dshop_bu_dag',
@@ -138,40 +32,39 @@ with DAG(
     stage3 = DummyOperator(task_id=f'stage3', dag=dag)
     end = DummyOperator(task_id=f'end', dag=dag)
 
-    for table in TABLES:
-        table_name = table['name']
+    for table in cfg.dshop.tables:
         t = PostgresDumpToHDFSOperator(
-            task_id=f'download_db_data_{table_name}',
+            task_id=f'download_db_data_{table}',
             dag=dag,
-            postgres_conn_id=POSTGRES_CONNECTION, 
-            dump_table=table_name,
-            dump_path=DOWNLOAD_PATH,
-            dump_temp_folder=TEMP_PATH,
-            hdfs_conn_id=HDFS_CONNECTION,
+            postgres_conn_id=cfg.common.postgres_connection, 
+            dump_table=table,
+            dump_path=path.join(cfg.dshop.bronze_path,'data'),
+            dump_temp_folder=path.join(cfg.dshop.bronze_path, 'temp'),
+            hdfs_conn_id=cfg.common.hdfs_connection,
         )
         start >> t >> stage2
 
-    for table in TABLES:
-        table_name = table['name']
-        table_schema = table['schema']
-        table_transform = table['transform']
-        table_partition = table['partitionBy']
+    for table in cfg.dshop.tables:
+        table_name = table
+        table_schema = cfg.dshop.tables[table].table_schema
+        table_transform = getattr(DWH, cfg.dshop.tables[table].transform)
+        table_partition = cfg.dshop.tables[table].partitionBy
         t = BronzeToSilverOperator(
             task_id=f'bronze_to_silver_{table_name}',
             dag=dag,
-            load_path=path.join(BRONZE_PATH, 'data', TODAY_DATE, table_name+'.csv'),
-            save_path=path.join(SILVER_PATH, table_name),
+            load_path=path.join(cfg.dshop.bronze_path, 'data', date.today().strftime('%Y-%m-%d'), table_name+'.csv'),
+            save_path=path.join(cfg.dshop.silver_path, table_name),
             schema=table_schema,
             python_callable=table_transform,
             partitition_by=table_partition,
         )
         stage2 >> t >> stage3
 
-    for process in SILVER_TO_DWH_PROCESS:
+    for process in cfg.dshop.silver_to_dwh_process:
         t = PythonOperator(
-            task_id=f'silver_to_dwh_{process.__name__}',
+            task_id=f'silver_to_dwh_{process}',
             dag=dag,
-            python_callable=process,
+            python_callable=getattr(DWH, process),
         )
         stage3 >> t >> end
 

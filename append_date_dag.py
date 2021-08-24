@@ -4,16 +4,14 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 
 from dwh import functions as DWH
+from tools import cfg
 
 default_args = {
-    'owner': 'lesyk_maksym',
-    'email': ['kiev.blues@gmail.com'],
-    'email_on_failure': False,
-    'retries': 2
+    'owner': cfg.append_date.owner,
+    'email': cfg.append_date.email,
+    'email_on_failure': cfg.append_date.email_on_failure,
+    'retries': cfg.append_date.retries
 }
-
-def fn(**c):
-    pass
 
 with DAG(
     'append_date_dag',

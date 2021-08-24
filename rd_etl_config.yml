@@ -1,0 +1,153 @@
+
+out_of_stock:
+  owner: "lesyk_maksym"
+  email: 
+    - "kiev.blues@gmail.com"
+  email_on_failure: false
+  retries: 2
+
+  bronze_path: "/bronze/out_of_stock/data"
+  silver_path: "/silver/out_of_stock/"
+  api_connection: "out_of_stock_connection"
+  data_endpoint: "/out_of_stock"
+  auth_endpoint: "/auth"
+
+  table_schema:
+    product_id:
+      type: IntegerType
+      nullable: false
+    date:
+      type: DateType
+      nullable: false
+
+
+dshop:
+  owner: "lesyk_maksym"
+  email: 
+    - "kiev.blues@gmail.com"
+  email_on_failure: false
+  retries: 2
+
+  bronze_path: "/bronze/dshop_bu"
+  silver_path: "/silver/dshop_bu"
+
+  tables:
+    aisles:
+      table_schema: 
+        aisle_id:
+          type: IntegerType
+          nullable: false
+        aisle:
+          type: StringType
+          nullable: true
+      transform: 'transform_aisles'
+    clients:
+      table_schema: 
+        id:
+          type: IntegerType
+          nullable: false
+        fullname:
+          type: StringType
+          nullable: true
+        location_area_id:
+          type: IntegerType
+          nullable: true
+      transform: 'transform_common'
+    departments:
+      table_schema: 
+        department_id: 
+          type: IntegerType
+          nullable: False
+        department:
+          type: StringType
+          nullable: True
+      transform: 'transform_departments'
+    products:
+      table_schema: 
+        product_id:
+          type: IntegerType
+          nullable: False
+        product_name:
+          type: StringType
+          nullable: True
+        aisle_id:
+          type: IntegerType
+          nullable: True
+        department_id:
+          type: IntegerType
+          nullable: True
+      transform: 'transform_common'
+    location_areas:
+      table_schema: 
+        area_id:
+          type: IntegerType
+          nullable: False
+        area:
+          type: StringType
+          nullable: True
+      transform: 'transform_common'
+    store_types:
+      table_schema: 
+        store_type_id:
+          type: IntegerType
+          nullable: False
+        type:
+          type: StringType
+          nullable: True
+      transform: 'transform_types'
+    stores:
+      table_schema: 
+        store_id:
+          type: IntegerType
+          nullable: False
+        location_area_id:
+          type: IntegerType
+          nullable: True
+        store_type_id:
+          type: IntegerType
+          nullable: True
+      transform: 'transform_common'
+    orders:
+      table_schema: 
+        order_id:
+          type: IntegerType
+          nullable: True
+        product_id:
+          type: IntegerType
+          nullable: True
+        client_id:
+          type: IntegerType
+          nullable: True
+        store_id:
+          type: IntegerType
+          nullable: True
+        quantity:
+          type: IntegerType
+          nullable: True
+        order_date:
+          type: DateType
+          nullable: True
+      partitionBy: 'store_id'
+      transform: 'transform_common'
+  
+  silver_to_dwh_process:
+    - "process_dim_stores"
+    - "process_dim_products"
+    - "process_dim_clients"
+    - "process_dim_area"
+    - "process_fact_orders"
+
+
+
+append_date:
+  owner: "lesyk_maksym"
+  email: 
+    - "kiev.blues@gmail.com"
+  email_on_failure: false
+  retries: 2
+
+common:
+  hdfs_connection: "hadoop_connection"
+  postgres_connection: "postgres_dshop_bu_connection"
+  dwh_connection: "dwh_connection"
+  jdbc_path: "/home/user/jdbc/postgresql-42.2.23.jar"

@@ -5,24 +5,18 @@ from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import StructType,StructField, StringType, IntegerType, DateType
 import pyspark.sql.functions as F
+from airflow.models.connection import Connection
+from airflow.hooks.base_hook import BaseHook
 
-
-hdfs_url = 'http://127.0.0.1:50070/'
-
-gp_url = "jdbc:postgresql://127.0.0.1:5433/rd_dwh"
-gp_properties = {"user": "gpuser", "password": "secret"}
-
-jdbc_path = '/home/user/jdbc/postgresql-42.2.23.jar'
-
-SILVER_PATH = '/silver/dshop_bu'
+from tools import cfg
 
 
 def get_file_from_table(table:str) -> str:
-    return os.path.join(SILVER_PATH, table)
+    return os.path.join(cfg.dshop.silver_path, table)
 
 def open_spark_session() -> SparkSession:
     return SparkSession.builder\
-        .config('spark.driver.extraClassPath', jdbc_path)\
+        .config('spark.driver.extraClassPath', cfg.common.jdbc_path)\
         .master('local')\
         .appName("SilverToDWH")\
         .getOrCreate()
@@ -34,6 +28,11 @@ def load_from_silver(spark: SparkSession, table: str) -> DataFrame:
 
 def save_to_dwh(df: DataFrame, table: str):
     logging.info(f'Writing data to {table}...')
+
+    dwh_connection: Connection = BaseHook.get_connection(cfg.common.dwh_connection)
+    gp_url = f"jdbc:postgresql://{dwh_connection.host}:{dwh_connection.port}/{dwh_connection.schema}"
+    gp_properties = {"user": dwh_connection.login, "password": dwh_connection.password}
+
     df.write.options(batchSize=100000, queyTime=690)\
             .jdbc(gp_url,
                   table=table,
@@ -42,6 +41,11 @@ def save_to_dwh(df: DataFrame, table: str):
 
 def append_to_dwh(df: DataFrame, table: str):
     logging.info(f'Appending data to {table}...')
+
+    dwh_connection: Connection = BaseHook.get_connection(cfg.common.dwh_connection)
+    gp_url = f"jdbc:postgresql://{dwh_connection.host}:{dwh_connection.port}/{dwh_connection.schema}"
+    gp_properties = {"user": dwh_connection.login, "password": dwh_connection.password}
+
     df.write.jdbc(gp_url,
                   table=table,
                   properties=gp_properties,
@@ -109,7 +113,7 @@ def process_dim_stores():
 def process_fact_out_of_stock():
     spark = open_spark_session()
 
-    out_of_stock_df = spark.read.parquet('/silver/out_of_stock')
+    out_of_stock_df = spark.read.parquet(cfg.out_of_stock.silver_path)
 
     fact_out_of_stock_df = out_of_stock_df.withColumnRenamed('date','oos_date')
 
@@ -177,3 +181,19 @@ def append_dim_date(execution_date, **context):
     df = spark.createDataFrame(data=data, schema=schema)    
 
     append_to_dwh(df, 'dim_date')
+
+def transform_common(session: SparkSession, df: DataFrame) -> DataFrame:
+    return df.dropDuplicates()
+
+def transform_aisles(session: SparkSession, df: DataFrame) -> DataFrame:
+    return df.where(F.isnull(df.aisle) != True)\
+             .dropDuplicates()
+
+def transform_departments(session: SparkSession, df: DataFrame) -> DataFrame:
+    return df.where(F.isnull(df.department) != True)\
+             .dropDuplicates()
+
+def transform_types(session: SparkSession, df: DataFrame) -> DataFrame:
+    return df.where(F.isnull(df.type) != True)\
+             .dropDuplicates()
+
