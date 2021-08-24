@@ -1,4 +1,4 @@
-DROP DATABASE rd_dwh;
+--DROP DATABASE rd_dwh;
 
 CREATE DATABASE rd_dwh ENCODING 'UTF8';
 
@@ -6,13 +6,13 @@ ALTER DATABASE rd_dwh OWNER TO gpuser;
 
 \connect rd_dwh
 
-DROP TABLE fact_out_of_stock;
-DROP TABLE fact_orders;
-DROP TABLE dim_date;
-DROP TABLE dim_products;
-DROP TABLE dim_clients;
-DROP TABLE dim_stores;
-DROP TABLE dim_area;
+--DROP TABLE fact_out_of_stock;
+--DROP TABLE fact_orders;
+--DROP TABLE dim_date;
+--DROP TABLE dim_products;
+--DROP TABLE dim_clients;
+--DROP TABLE dim_stores;
+--DROP TABLE dim_area;
 
 
 
