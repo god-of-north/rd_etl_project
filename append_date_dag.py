@@ -12,11 +12,14 @@ default_args = {
     'retries': 2
 }
 
+def fn(**c):
+    pass
+
 with DAG(
     'append_date_dag',
     description='Appends date to dim_date in DWH',
     schedule_interval='@daily',
-    start_date=datetime(2021,8,10,22,0),
+    start_date=datetime(2021,8,22,0,0),
     default_args=default_args
 ) as dag:
 
