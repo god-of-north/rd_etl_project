@@ -14,8 +14,6 @@ from dwh import functions as DWH
 from tools import cfg
 
 
-TODAY_DATE = date.today().strftime('%Y-%m-%d')
-
 default_args = {
     'owner': cfg.out_of_stock.owner,
     'email': cfg.out_of_stock.email,
@@ -23,14 +21,14 @@ default_args = {
     'retries': cfg.out_of_stock.retries
 }
 
-def download_data():
+def download_data(execution_date, **kwargs):
     api_connection: Connection = BaseHook.get_connection(cfg.out_of_stock.api_connection)
     hdfs_connection: Connection = BaseHook.get_connection(cfg.common.hdfs_connection)
 
     CONFIG = {
                 'data':{
                     'endpoint': cfg.out_of_stock.data_endpoint,
-                    'dates': [TODAY_DATE],
+                    'dates': [execution_date._datetime.strftime('%Y-%m-%d')],
                     'url': api_connection.host
                 },
                 'auth':{
@@ -57,12 +55,13 @@ with DAG(
         task_id='download_api_data',
         dag=dag,
         python_callable=download_data,
+        provide_context=True,
     )
 
     bronze_to_silver = BronzeToSilverAppendOperator(
         task_id='bronze_to_silver',
         dag=dag,
-        load_path=path.join(cfg.out_of_stock.bronze_path, TODAY_DATE, 'data.json'),
+        load_path=cfg.out_of_stock.bronze_path,
         save_path=cfg.out_of_stock.silver_path,
         python_callable=DWH.transform_common,
         partitition_by='date',
